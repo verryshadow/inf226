@@ -191,10 +191,10 @@ try:
         id integer PRIMARY KEY, 
         sender TEXT NOT NULL,
         message TEXT NOT NULL);''')
-    c.execute('''CREATE TABLE IF NOT EXISTS announcements (
-        id integer PRIMARY KEY, 
-        author TEXT NOT NULL,
-        text TEXT NOT NULL);''')
+    # c.execute('''CREATE TABLE IF NOT EXISTS announcements (
+    #     id integer PRIMARY KEY,
+    #     author TEXT NOT NULL,
+    #     text TEXT NOT NULL);''')
 except Error as e:
     print(e)
     sys.exit(1)
