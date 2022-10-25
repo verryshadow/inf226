@@ -1,4 +1,4 @@
-Part 2A:
+# Part 2A:
 
 Structure: In general, the code seems completely messy and unstructured. Therefore, it is harder to find bugs (e.g. logical bugs) and security holes. Moreover, the programmer stopped writing comments, what is part of an important feature of a well written code. Our suggestion is to split the code in different files to improve the readability. 
 
