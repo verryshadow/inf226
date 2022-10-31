@@ -42,7 +42,7 @@ def evalute_password(input, username):
     :param username: Name of the user that wants to login.
     :return: Do the passwords match?
     """
-    u = users.get(username)
+    u = get_current_user(username)
     salt = u['password'][1]
     # Apply hash function on user input.
     h_1 = hashlib.sha256(str.encode(input)).digest()
@@ -74,16 +74,35 @@ def popsession():
     session.pop('username', None)
     print("Session Deleted")
 
-"""
-Passwords are stored with a 128-bit salt in form of tuples (hashed password, salt)
-"""
-users = {'alice': {'password': ('9432b8b17e4a6a2bab351cf92fa62f4391c174aeac12904f5cf8bb4afc4fe297',
-                                0xBFDBF58A677F96595E938A53D9F8539D), 'token': 'tiktok'},
-         # PSSSSST! Real password is password123
-         'bob': {'password': ('203fcc0dd6e6ad4aa4ae72b5c284756fd52628e0017af2e5dc3f7135acc0c545',
-                              0x542CA2AD7A731B6118A3F7541F0C8831)}
-         }
-         # PSSSSST! Real password is bananas
+
+def get_current_user(username):
+    try:
+        """
+        {'password': ('9432b8b17e4a6a2bab351cf92fa62f4391c174aeac12904f5cf8bb4afc4fe297',
+                      0xBFDBF58A677F96595E938A53D9F8539D), 'token': 'tiktok'}
+                      """
+        stmt = f"SELECT password FROM login_data WHERE username='{username}'"
+        c_password = conn.execute(stmt)
+        password = c_password.fetchall()[0][0]
+        stmt = f"SELECT salt FROM login_data WHERE username='{username}'"
+        c_salt = conn.execute(stmt)
+        salt = int(c_salt.fetchall()[0][0], 16)
+        stmt = f"SELECT token FROM login_data WHERE username='{username}'"
+        c_token = conn.execute(stmt)
+        token = c_token.fetchall()[0][0]
+        return {'password': (password, salt), 'token': token}
+    except Error as e:
+        return f'ERROR: {e}', 500
+
+
+def get_users():
+    try:
+        stmt = f"SELECT username FROM login_data"
+        c = conn.execute(stmt)
+        users = c.fetchall()
+        return [user[0] for user in users]
+    except Error as e:
+        return f'ERROR: {e}', 500
 
 
 # Class to store user info
@@ -97,7 +116,7 @@ class User(flask_login.UserMixin):
 # the User object for a given user id
 @login_manager.user_loader
 def user_loader(user_id):
-    if user_id not in users:
+    if user_id not in get_users():
         return
 
     # For a real app, we would load the User from a database or something
@@ -125,7 +144,7 @@ def request_loader(request):
     if auth_scheme == 'basic':  # Basic auth has username:password in base64
         (uid, passwd) = b64decode(auth_params.encode(errors='ignore')).decode(errors='ignore').split(':', maxsplit=1)
         print(f'Basic auth: {uid}:{passwd}')
-        u = users.get(uid)
+        u = get_current_user(uid)
         if u:  # and check_password(u.password, passwd):
             return user_loader(uid)
     elif auth_scheme == 'bearer':  # Bearer auth contains an access token;
@@ -134,8 +153,9 @@ def request_loader(request):
         # you encode it in the token – see JWT (JSON Web Token), which
         # encodes credentials and (possibly) authorization info)
         print(f'Bearer auth: {auth_params}')
-        for uid in users:
-            if users[uid].get('token') == auth_params:
+        for uid in get_users():
+            cur = get_current_user(uid)
+            if cur.get('token') == auth_params:
                 return user_loader(uid)
     # For other authentication schemes, see
     # https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication
@@ -180,7 +200,7 @@ def login():
     if form.validate_on_submit():
         username = form.username.data
         password = form.password.data
-        u = users.get(username)
+        u = get_current_user(username)
         if u and evalute_password(password, username):
             user = user_loader(username)
 
@@ -188,6 +208,8 @@ def login():
             login_user(user)
 
             flask.flash('Logged in successfully.')
+            get_current_user(username)
+            get_users()
             setsession(username)
 
             next = flask.request.args.get('next')
@@ -314,6 +336,20 @@ try:
         id integer PRIMARY KEY, 
         sender TEXT NOT NULL,
         message TEXT NOT NULL);''')
+    c.execute('''CREATE TABLE IF NOT EXISTS login_data (
+            id integer PRIMARY KEY, 
+            username TEXT NOT NULL,
+            password TEXT NOT NULL,
+            salt TEXT NOT NULL,
+            token TEXT);''')
+    """
+    c.execute('''INSERT INTO login_data (username, password, salt, token)
+                values ('alice', '9432b8b17e4a6a2bab351cf92fa62f4391c174aeac12904f5cf8bb4afc4fe297',
+                '0xBFDBF58A677F96595E938A53D9F8539D', 'tiktok');''')
+    c.execute('''INSERT INTO login_data (username, password, salt, token)
+                    values ('bob', '203fcc0dd6e6ad4aa4ae72b5c284756fd52628e0017af2e5dc3f7135acc0c545',
+                    '0x542CA2AD7A731B6118A3F7541F0C8831', 'tiktok');''')
+    """
     # c.execute('''CREATE TABLE IF NOT EXISTS announcements (
     #     id integer PRIMARY KEY,
     #     author TEXT NOT NULL,
