@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from flask import Flask, abort, request, send_from_directory, make_response, render_template
+from flask import Flask, abort, request, send_from_directory, make_response, render_template, redirect
 from werkzeug.datastructures import WWWAuthenticate
 import flask
 from login_form import LoginForm
@@ -15,7 +15,8 @@ from pygments.filters import NameHighlightFilter, KeywordCaseFilter
 from pygments import token;
 from threading import local
 import flask_login
-from flask_login import login_required, login_user
+from flask_login import login_required, login_user, logout_user
+import hashlib
 
 tls = local()
 inject = "'; insert into messages (sender,message) values ('foo', 'bar');select '"
@@ -34,9 +35,36 @@ login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-users = {'alice': {'password': 'password123', 'token': 'tiktok'},
-         'bob': {'password': 'bananas'}
+def evalute_password(input, username):
+    """
+    Given a username and an input, evaluate the input against the real password.
+    :param input: Password input.
+    :param username: Name of the user that wants to login.
+    :return: Do the passwords match?
+    """
+    u = users.get(username)
+    salt = u['password'][1]
+    # Apply hash function on user input.
+    h_1 = hashlib.sha256(str.encode(input)).digest()
+    # Convert result form hash function to integer and perform XOR-operation with salt.
+    h_1 = int.from_bytes(h_1, 'big')
+    add_salt = h_1 ^ salt
+    # Apply hash function another time.
+    h_2 = hashlib.sha256(add_salt.to_bytes(32, 'big')).hexdigest()
+    # Check if the two passwords match.
+    return h_2 == u['password'][0]
+
+
+"""
+Passwords are stored with a 128-bit salt in form of tuples (hashed password, salt)
+"""
+users = {'alice': {'password': ('9432b8b17e4a6a2bab351cf92fa62f4391c174aeac12904f5cf8bb4afc4fe297',
+                                0xBFDBF58A677F96595E938A53D9F8539D), 'token': 'tiktok'},
+         # PSSSSST! Real password is password123
+         'bob': {'password': ('203fcc0dd6e6ad4aa4ae72b5c284756fd52628e0017af2e5dc3f7135acc0c545',
+                              0x542CA2AD7A731B6118A3F7541F0C8831)}
          }
+         # PSSSSST! Real password is bananas
 
 
 # Class to store user info
@@ -130,11 +158,10 @@ def login():
         print(f'Received form: {"invalid" if not form.validate() else "valid"} {form.form_errors} {form.errors}')
         print(request.form)
     if form.validate_on_submit():
-        # TODO: we must check the username and password
         username = form.username.data
         password = form.password.data
         u = users.get(username)
-        if u:  # and check_password(u.password, password):
+        if u and evalute_password(password, username):
             user = user_loader(username)
 
             # automatically sets logged in session cookie
@@ -151,6 +178,13 @@ def login():
 
             return flask.redirect(next or flask.url_for('index'))
     return render_template('./login.html', form=form)
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(".")
 
 
 @app.get('/search')
