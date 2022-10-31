@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from flask import Flask, abort, request, send_from_directory, make_response, render_template, redirect
+from flask import Flask, abort, request, send_from_directory, make_response, render_template, redirect, session
 from werkzeug.datastructures import WWWAuthenticate
 import flask
 from login_form import LoginForm
@@ -54,6 +54,25 @@ def evalute_password(input, username):
     # Check if the two passwords match.
     return h_2 == u['password'][0]
 
+
+def setsession(username):
+    session['username'] = username
+    print(f"The session has been Set")
+
+
+def getsession():
+    if 'username' in session:
+        username = session['username']
+        print(f"Welcome {username}")
+        return True
+    else:
+        print("Welcome Anonymous")
+        return False
+
+
+def popsession():
+    session.pop('username', None)
+    print("Session Deleted")
 
 """
 Passwords are stored with a 128-bit salt in form of tuples (hashed password, salt)
@@ -147,6 +166,7 @@ def pygmentize(text):
 @app.route('/index.html')
 @login_required
 def index_html():
+    getsession()
     return send_from_directory(app.root_path,
                                'index.html', mimetype='text/html')
 
@@ -168,6 +188,7 @@ def login():
             login_user(user)
 
             flask.flash('Logged in successfully.')
+            setsession(username)
 
             next = flask.request.args.get('next')
 
@@ -184,13 +205,18 @@ def login():
 @login_required
 def logout():
     logout_user()
+    popsession()
     return redirect(".")
 
 
 @app.get('/search')
 def search():
+    is_session = getsession()
+    if not is_session:
+        return redirect('.')
     query = request.args.get('q') or request.form.get('q') or '*'
-    stmt = f"SELECT * FROM messages WHERE message GLOB '{query}'"
+    user = session['username']
+    stmt = f"SELECT * FROM messages WHERE message GLOB '{query}' AND sender='{user}'"
     result = f"Query: {pygmentize(stmt)}\n"
     try:
         c = conn.execute(stmt)
@@ -206,8 +232,12 @@ def search():
 
 @app.get('/messages')
 def messages():
+    is_session = getsession()
+    if not is_session:
+        return redirect('.')
     query = '*'
-    stmt = f"SELECT * FROM messages"
+    user = session['username']
+    stmt = f"SELECT * FROM messages WHERE sender='{user}'"
     result = f"Querry for messages: {pygmentize(stmt)}\n"
     try:
         c = conn.execute(stmt)
@@ -223,8 +253,12 @@ def messages():
 
 @app.get('/message/<int:ID>')
 def message_id(ID):
+    is_session = getsession()
+    if not is_session:
+        return redirect('.')
     # query = request.args.get('q') or request.form.get('q') or '*'
-    stmt = f"SELECT * FROM messages WHERE id = {ID}"
+    user = session['username']
+    stmt = f"SELECT * FROM messages WHERE id = {ID} AND sender='{user}'"
     result = f"Querry for messages: {pygmentize(stmt)}\n"
     try:
         c = conn.execute(stmt)
@@ -240,8 +274,11 @@ def message_id(ID):
 
 @app.route('/new', methods=['POST', 'GET'])
 def new():
+    is_session = getsession()
+    if not is_session:
+        return redirect('.')
     try:
-        sender = request.args.get('sender') or request.form.get('sender')
+        sender = session['username']
         message = request.args.get('message') or request.args.get('message')
         if not sender or not message:
             return f'ERROR: missing sender or message'
@@ -255,8 +292,11 @@ def new():
 
 @app.route('/send', methods=['POST', 'GET'])
 def send():
+    is_session = getsession()
+    if not is_session:
+        return redirect('.')
     try:
-        sender = request.args.get('sender') or request.form.get('sender')
+        sender = session['username']
         message = request.args.get('message') or request.args.get('message')
         if not sender or not message:
             return f'ERROR: missing sender or message'
