@@ -204,6 +204,55 @@ def search():
         return (f'{result}ERROR: {e}', 500)
 
 
+@app.get('/messages')
+def messages():
+    query = '*'
+    stmt = f"SELECT * FROM messages"
+    result = f"Querry for messages: {pygmentize(stmt)}\n"
+    try:
+        c = conn.execute(stmt)
+        rows = c.fetchall()
+        result = result + 'Result:\n'
+        for row in rows:
+            result = f'{result}    {dumps(row)}\n'
+        c.close()
+        return result
+    except Error as e:
+        return (f'{result}ERROR: {e}', 500)
+
+
+@app.get('/message/<int:ID>')
+def message_id(ID):
+    # query = request.args.get('q') or request.form.get('q') or '*'
+    stmt = f"SELECT * FROM messages WHERE id = {ID}"
+    result = f"Querry for messages: {pygmentize(stmt)}\n"
+    try:
+        c = conn.execute(stmt)
+        rows = c.fetchall()
+        result = result + 'Result:\n'
+        for row in rows:
+            result = f'{result}    {dumps(row)}\n'
+        c.close()
+        return result
+    except Error as e:
+        return (f'{result}ERROR: {e}', 500)
+
+
+@app.route('/new', methods=['POST', 'GET'])
+def new():
+    try:
+        sender = request.args.get('sender') or request.form.get('sender')
+        message = request.args.get('message') or request.args.get('message')
+        if not sender or not message:
+            return f'ERROR: missing sender or message'
+        stmt = f"INSERT INTO messages (sender, message) values ('{sender}', '{message}');"
+        result = f"Query: {pygmentize(stmt)}\n"
+        conn.execute(stmt)
+        return f'{result}ok'
+    except Error as e:
+        return f'{result}ERROR: {e}'
+
+
 @app.route('/send', methods=['POST', 'GET'])
 def send():
     try:
