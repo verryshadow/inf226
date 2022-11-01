@@ -237,7 +237,7 @@ def search():
         return redirect('.')
     query = request.args.get('q') or request.form.get('q') or '*'
     user = session['username']
-    stmt = f"SELECT * FROM messages WHERE message GLOB '{query}' AND (sender='{user}' OR receiver='{user}')"
+    stmt = f"SELECT * FROM messages WHERE message GLOB '{query}' AND (sender='{user}' OR receiver LIKE '{user}')"
     result = f"Query: {pygmentize(stmt)}\n"
     try:
         c = conn.execute(stmt)
