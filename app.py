@@ -258,8 +258,8 @@ def messages():
         return redirect('.')
     query = '*'
     user = session['username']
-    stmt = f"SELECT * FROM messages WHERE (sender='{user}' OR id IN (SELECT message_id FROM messages_to_receivers WHERE receiver_name={user}))"
-    result = f"Querry for messages: {pygmentize(stmt)}\n"
+    stmt = f"SELECT * FROM messages WHERE id IN (SELECT message_id FROM messages_to_receivers WHERE receiver_name={user})"
+    result = f"Query for messages: {pygmentize(stmt)}\n"
     try:
         c = conn.execute(stmt)
         rows = c.fetchall()
@@ -279,14 +279,26 @@ def message_id(ID):
         return redirect('.')
     # query = request.args.get('q') or request.form.get('q') or '*'
     user = session['username']
-    stmt = f"SELECT * FROM messages WHERE id = {ID} AND (sender='{user}' OR receiver='{user}')"
-    result = f"Querry for messages: {pygmentize(stmt)}\n"
+    result = ''
     try:
+        stmt = f"SELECT sender FROM messages WHERE id = {ID})"
         c = conn.execute(stmt)
-        rows = c.fetchall()
-        result = result + 'Result:\n'
-        for row in rows:
-            result = f'{result}    {dumps(row)}\n'
+        user_sent = c.fetchall()
+
+        stmt = f"SELECT * FROM messages WHERE id = {ID})"
+        c = conn.execute(stmt)
+        row = c.fetchall()
+        result += f"Querry for messages: {pygmentize(stmt)}\n"
+
+        result += 'Result:\n'
+        result += f'{result}    {dumps(row)}\n'
+        if user_sent == user:
+            stmt = f"SELECT receiver_name FROM messages_to_receivers WHERE message_id={ID}"
+            c = conn.execute(stmt)
+            rows = c.fetchall()
+            result += 'Receivers:\n'
+            for row in rows:
+                result += f'{result}    {dumps(row)}\n'
         c.close()
         return result
     except Error as e:
