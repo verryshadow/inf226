@@ -97,6 +97,10 @@
             <span></span>
             <label for="message">Message:</label>
             <textarea id="message" style="grid-row: span 4;">A message...</textarea>
+            <label for="reply_id">Reply ID:</label>
+            <input type="number" id="reply_id" name="reply_id">
+
+
         </div>
         <div id="anchor">
             <a href="logout">Logout</a>
@@ -107,7 +111,8 @@
     var reqId = 0;
     var anchor = document.getElementById('anchor');
     var searchField = document.getElementById('search');
-    var receiverField = document.getElementById('receiver');
+    var receiverField = document.getElementById('receiver')
+    var reply_idField = document.getElementById('reply_id')
     var messageField = document.getElementById('message');
     var searchBtn = document.getElementById('searchBtn');
     var sendBtn = document.getElementById('sendBtn');
@@ -149,9 +154,9 @@
         anchor.scrollIntoView();
         checkAnnouncements();
     };
-    var send = async (receiver, message) => {
+    var send = async (receiver, message, reply_id) => {
         const id = reqId++;
-        const q = `/send?receiver=${encodeURIComponent(receiver)}&message=${encodeURIComponent(message)}`;
+        const q = `/new?receiver=${encodeURIComponent(receiver)}&message=${encodeURIComponent(message)}&reply_id=${encodeURIComponent(reply_id)}`;
         res = await fetch(q, { method: 'post' });
         console.log(res);
         const head = document.createElement('h3');
@@ -172,7 +177,7 @@
     });
     searchBtn.addEventListener('click', () => search(searchField.value));
     allBtn.addEventListener('click', () => search('*'));
-    sendBtn.addEventListener('click', () => send(receiverField.value, messageField.value));
+    sendBtn.addEventListener('click', () => send(receiverField.value, messageField.value, reply_idField.value));
     checkAnnouncements();
 </script>
 

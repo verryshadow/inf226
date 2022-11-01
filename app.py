@@ -294,25 +294,6 @@ def message_id(ID):
 
 
 @app.route('/new', methods=['POST', 'GET'])
-def new():
-    is_session = getsession()
-    if not is_session:
-        return redirect('.')
-    try:
-        sender = session['username']
-        receiver = request.args.get('receiver') or request.args.get('receiver')
-        message = request.args.get('message') or request.args.get('message')
-        if not sender or not message:
-            return f'ERROR: missing sender or message'
-        stmt = f"INSERT INTO messages (sender, receiver, message) values ('{sender}', '{receiver}', '{message}');"
-        result = f"Query: {pygmentize(stmt)}\n"
-        conn.execute(stmt)
-        return f'{result}ok'
-    except Error as e:
-        return f'{result}ERROR: {e}'
-
-
-@app.route('/send', methods=['POST', 'GET'])
 def send():
     is_session = getsession()
     if not is_session:
@@ -320,10 +301,15 @@ def send():
     try:
         sender = session['username']
         receiver = request.args.get('receiver') or request.args.get('receiver')
+        reply_id = request.args.get('reply_id') or request.args.get('reply_id')
+        print(reply_id)
         message = request.args.get('message') or request.args.get('message')
         if not sender or not message:
             return f'ERROR: missing sender or message'
-        stmt = f"INSERT INTO messages (sender, receiver, message) values ('{sender}', '{receiver}', '{message}');"
+        if(reply_id == ""):
+            stmt = f"INSERT INTO messages (sender, receiver, reply_id, message) values ('{sender}', '{receiver}', null, '{message}');"
+        else:
+            stmt = f"INSERT INTO messages (sender, receiver, reply_id, message) values ('{sender}', '{receiver}', '{reply_id}', '{message}');"
         result = f"Query: {pygmentize(stmt)}\n"
         conn.execute(stmt)
         return f'{result}ok'
@@ -338,6 +324,7 @@ try:
         sender TEXT NOT NULL,
         receiver TEXT NOT NULL,
         sqltime TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        reply_id integer DEFAULT NULL,
         message TEXT NOT NULL);''')
     c.execute('''CREATE TABLE IF NOT EXISTS login_data (
             id integer PRIMARY KEY, 
@@ -345,14 +332,14 @@ try:
             password TEXT NOT NULL,
             salt TEXT NOT NULL,
             token TEXT);''')
-    """
+
     c.execute('''INSERT INTO login_data (username, password, salt, token)
                 values ('alice', '9432b8b17e4a6a2bab351cf92fa62f4391c174aeac12904f5cf8bb4afc4fe297',
                 '0xBFDBF58A677F96595E938A53D9F8539D', 'tiktok');''')
     c.execute('''INSERT INTO login_data (username, password, salt, token)
                     values ('bob', '203fcc0dd6e6ad4aa4ae72b5c284756fd52628e0017af2e5dc3f7135acc0c545',
                     '0x542CA2AD7A731B6118A3F7541F0C8831', 'tiktok');''')
-                    """
+
     # c.execute('''CREATE TABLE IF NOT EXISTS announcements (
     #     id integer PRIMARY KEY,
     #     author TEXT NOT NULL,
