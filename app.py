@@ -337,6 +337,7 @@ try:
         id integer PRIMARY KEY, 
         sender TEXT NOT NULL,
         receiver TEXT NOT NULL,
+        sqltime TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         message TEXT NOT NULL);''')
     c.execute('''CREATE TABLE IF NOT EXISTS login_data (
             id integer PRIMARY KEY, 
@@ -344,12 +345,14 @@ try:
             password TEXT NOT NULL,
             salt TEXT NOT NULL,
             token TEXT);''')
+    """
     c.execute('''INSERT INTO login_data (username, password, salt, token)
                 values ('alice', '9432b8b17e4a6a2bab351cf92fa62f4391c174aeac12904f5cf8bb4afc4fe297',
                 '0xBFDBF58A677F96595E938A53D9F8539D', 'tiktok');''')
     c.execute('''INSERT INTO login_data (username, password, salt, token)
                     values ('bob', '203fcc0dd6e6ad4aa4ae72b5c284756fd52628e0017af2e5dc3f7135acc0c545',
                     '0x542CA2AD7A731B6118A3F7541F0C8831', 'tiktok');''')
+                    """
     # c.execute('''CREATE TABLE IF NOT EXISTS announcements (
     #     id integer PRIMARY KEY,
     #     author TEXT NOT NULL,
