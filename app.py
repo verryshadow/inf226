@@ -258,7 +258,7 @@ def messages():
         return redirect('.')
     query = '*'
     user = session['username']
-    stmt = f"SELECT * FROM messages WHERE (sender='{user}' OR receiver='{user}')"
+    stmt = f"SELECT * FROM messages WHERE (sender='{user}' OR id IN (SELECT message_id FROM messages_to_receivers WHERE receiver_name={user}))"
     result = f"Querry for messages: {pygmentize(stmt)}\n"
     try:
         c = conn.execute(stmt)
@@ -300,18 +300,26 @@ def send():
         return redirect('.')
     try:
         sender = session['username']
-        receiver = request.args.get('receiver') or request.args.get('receiver')
+        # Comma separated list of receivers
+        receivers = request.args.get('receiver') or request.args.get('receiver')
+        receivers = receivers.split(',')
         reply_id = request.args.get('reply_id') or request.args.get('reply_id')
         print(reply_id)
         message = request.args.get('message') or request.args.get('message')
         if not sender or not message:
             return f'ERROR: missing sender or message'
         if(reply_id == ""):
-            stmt = f"INSERT INTO messages (sender, receiver, reply_id, message) values ('{sender}', '{receiver}', null, '{message}');"
+            stmt = f"INSERT INTO messages (sender, reply_id, message) values ('{sender}', null, '{message}');"
         else:
-            stmt = f"INSERT INTO messages (sender, receiver, reply_id, message) values ('{sender}', '{receiver}', '{reply_id}', '{message}');"
+            stmt = f"INSERT INTO messages (sender, reply_id, message) values ('{sender}', '{reply_id}', '{message}');"
         result = f"Query: {pygmentize(stmt)}\n"
         conn.execute(stmt)
+        # Get the ID of the current row.
+        current_row_id = '''SELECT last_insert_rowid()'''
+        for receiver in receivers:
+            stmt = f"INSERT INTO messages_to_receivers (message_id, receiver_name) values ('{current_row_id}', '{receiver}');"
+            conn.execute(stmt)
+            result += f'{pygmentize(stmt)}\n'
         return f'{result}ok'
     except Error as e:
         return f'{result}ERROR: {e}'
@@ -322,7 +330,6 @@ try:
     c.execute('''CREATE TABLE IF NOT EXISTS messages (
         id integer PRIMARY KEY, 
         sender TEXT NOT NULL,
-        receiver TEXT NOT NULL,
         sqltime TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         reply_id integer DEFAULT NULL,
         message TEXT NOT NULL);''')
@@ -332,7 +339,10 @@ try:
             password TEXT NOT NULL,
             salt TEXT NOT NULL,
             token TEXT);''')
-
+    c.execute('''CREATE TABLE IF NOT EXISTS messages_to_receivers (
+        id integer PRIMARY KEY, 
+        message_id integer NOT NULL,
+        receiver_name TEXT NOT NULL);''')
     c.execute('''INSERT INTO login_data (username, password, salt, token)
                 values ('alice', '9432b8b17e4a6a2bab351cf92fa62f4391c174aeac12904f5cf8bb4afc4fe297',
                 '0xBFDBF58A677F96595E938A53D9F8539D', 'tiktok');''')
