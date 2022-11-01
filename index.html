@@ -91,8 +91,8 @@
             <input type="search" id="search" name="search" enterkeyhint="search" value="*">
             <button type="button" id="searchBtn">Search!</button>
             <button type="button" id="allBtn">Show all</button>
-            <label for="sender">From:</label>
-            <input type="text" id="sender" name="sender" value="Alice">
+            <label for="receiver">Receiver:</label>
+            <input type="text" id="receiver" name="receiver" value="Alice2">
             <button type="button" id="sendBtn">Send</button>
             <span></span>
             <label for="message">Message:</label>
@@ -107,7 +107,7 @@
     var reqId = 0;
     var anchor = document.getElementById('anchor');
     var searchField = document.getElementById('search');
-    var senderField = document.getElementById('sender');
+    var receiverField = document.getElementById('receiver');
     var messageField = document.getElementById('message');
     var searchBtn = document.getElementById('searchBtn');
     var sendBtn = document.getElementById('sendBtn');
@@ -149,9 +149,9 @@
         anchor.scrollIntoView();
         checkAnnouncements();
     };
-    var send = async (sender, message) => {
+    var send = async (receiver, message) => {
         const id = reqId++;
-        const q = `/send?sender=${encodeURIComponent(sender)}&message=${encodeURIComponent(message)}`;
+        const q = `/send?receiver=${encodeURIComponent(receiver)}&message=${encodeURIComponent(message)}`;
         res = await fetch(q, { method: 'post' });
         console.log(res);
         const head = document.createElement('h3');
@@ -172,7 +172,7 @@
     });
     searchBtn.addEventListener('click', () => search(searchField.value));
     allBtn.addEventListener('click', () => search('*'));
-    sendBtn.addEventListener('click', () => send(senderField.value, messageField.value));
+    sendBtn.addEventListener('click', () => send(receiverField.value, messageField.value));
     checkAnnouncements();
 </script>
 
