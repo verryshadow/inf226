@@ -29,16 +29,25 @@ Assumptions and Techincal Details  :
 5- Before showing the result of the search for a message, a line showing the format of the result is printed 
 
 How to test : 
-
+1- 
+2-
+3-
+4-
 
 
 Answers to Questions : 
+
 1- Who might attack the application? What can an attacker do? What damage could be done (in terms of confidentiality, integrity, availability)? Are there limits to what an attacker can do? Are there limits to what we can sensibly protect against?
 
+   was able to log in if only knew username 
 2- What are the main attack vectors for the application?
 
+ We have input fields , tried making them more secure (limiting what to be written)
+ 
+ 
 3- What should we do (or what have you done) to protect against attacks?
-
+ SQL ingection : check password , encrypt password 
+ 
 4- What is the access control model?
 
-5- How can you know that you security is good enough? (traceability)
+5- How can you know that you security is good enough? 
