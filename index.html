@@ -87,9 +87,9 @@
             <pre id="output"></pre>
         </main>
         <div id="controls">
-            <label for="search">Search:</label>
-            <input type="search" id="search" name="search" enterkeyhint="search" value="*">
-            <button type="button" id="searchBtn">Search!</button>
+            <label for="showMessage">Show MID:</label>
+            <input type="number" id="showMessage" name="showMessage" enterkeyhint="showMessage" value="*">
+            <button type="button" id="showMessageBtn">Show message!</button>
             <button type="button" id="allBtn">Show all</button>
             <label for="receiver">Receiver:</label>
             <input type="text" id="receiver" name="receiver" value="Alice">
@@ -110,11 +110,11 @@
 <script>
     var reqId = 0;
     var anchor = document.getElementById('anchor');
-    var searchField = document.getElementById('search');
+    var showMessageField = document.getElementById('showMessage');
     var receiverField = document.getElementById('receiver')
     var reply_idField = document.getElementById('reply_id')
     var messageField = document.getElementById('message');
-    var searchBtn = document.getElementById('searchBtn');
+    var showMessageBtn = document.getElementById('showMessageBtn');
     var sendBtn = document.getElementById('sendBtn');
     var allBtn = document.getElementById('allBtn');
     var output = document.getElementById('output');
@@ -139,9 +139,24 @@
             header.replaceChildren(...elts);
         }
     };
-    var search = async (query) => {
+    var showMessage = async (query) => {
         const id = reqId++;
-        const q = `/search?q=${encodeURIComponent(query)}`;
+        const q = `/message/${encodeURIComponent(query)}`;
+        res = await fetch(q);
+        console.log(res);
+        const head = document.createElement('h3');
+        head.textContent = `[${id}]  ${q} → ${res.status} ${res.statusText}`;
+        output.appendChild(head);
+        const body = document.createElement('p');
+        body.innerHTML = await res.text();
+        output.appendChild(body);
+        body.scrollIntoView({block: "end", inline: "nearest", behavior: "smooth"});
+        anchor.scrollIntoView();
+        checkAnnouncements();
+    };
+    var showAll = async () => {
+        const id = reqId++;
+        const q = `/messages`;
         res = await fetch(q);
         console.log(res);
         const head = document.createElement('h3');
@@ -170,13 +185,13 @@
         checkAnnouncements();
     };
 
-    searchField.addEventListener('keydown', ev => {
+    showMessageField.addEventListener('keydown', ev => {
         if (ev.key === 'Enter') {
-            search(searchField.value);
+            showMessage(showMessageField.value);
         }
     });
-    searchBtn.addEventListener('click', () => search(searchField.value));
-    allBtn.addEventListener('click', () => search('*'));
+    showMessageBtn.addEventListener('click', () => showMessage(showMessageField.value));
+    allBtn.addEventListener('click', () => showAll());
     sendBtn.addEventListener('click', () => send(receiverField.value, messageField.value, reply_idField.value));
     checkAnnouncements();
 </script>

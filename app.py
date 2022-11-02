@@ -35,6 +35,7 @@ login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+
 def evalute_password(input, username):
     """
     Given a username and an input, evaluate the input against the real password.
@@ -57,22 +58,17 @@ def evalute_password(input, username):
 
 def setsession(username):
     session['username'] = username
-    print(f"The session has been Set")
 
 
 def getsession():
     if 'username' in session:
-        username = session['username']
-        print(f"Welcome {username}")
         return True
     else:
-        print("Welcome Anonymous")
         return False
 
 
 def popsession():
     session.pop('username', None)
-    print("Session Deleted")
 
 
 def get_current_user(username):
@@ -81,14 +77,14 @@ def get_current_user(username):
         {'password': ('9432b8b17e4a6a2bab351cf92fa62f4391c174aeac12904f5cf8bb4afc4fe297',
                       0xBFDBF58A677F96595E938A53D9F8539D), 'token': 'tiktok'}
                       """
-        stmt = f"SELECT password FROM login_data WHERE username='{username}'"
-        c_password = conn.execute(stmt)
+        stmt = "SELECT password FROM login_data WHERE username=?"
+        c_password = conn.execute(stmt, (username,))
         password = c_password.fetchall()[0][0]
-        stmt = f"SELECT salt FROM login_data WHERE username='{username}'"
-        c_salt = conn.execute(stmt)
+        stmt = "SELECT salt FROM login_data WHERE username=?"
+        c_salt = conn.execute(stmt, (username,))
         salt = int(c_salt.fetchall()[0][0], 16)
-        stmt = f"SELECT token FROM login_data WHERE username='{username}'"
-        c_token = conn.execute(stmt)
+        stmt = "SELECT token FROM login_data WHERE username=?"
+        c_token = conn.execute(stmt, (username,))
         token = c_token.fetchall()[0][0]
         return {'password': (password, salt), 'token': token}
     except Error as e:
@@ -97,7 +93,7 @@ def get_current_user(username):
 
 def get_users():
     try:
-        stmt = f"SELECT username FROM login_data"
+        stmt = "SELECT username FROM login_data"
         c = conn.execute(stmt)
         users = c.fetchall()
         return [user[0] for user in users]
@@ -123,6 +119,7 @@ def user_loader(user_id):
     user = User()
     user.id = user_id
     return user
+
 
 # This method is called to get a User object based on a request,
 # for example, if using an api key or authentication token rather
@@ -230,6 +227,8 @@ def logout():
     return redirect(".")
 
 
+# We do not use this functionality in our application.
+"""
 @app.get('/search')
 def search():
     is_session = getsession()
@@ -237,10 +236,10 @@ def search():
         return redirect('.')
     query = request.args.get('q') or request.form.get('q') or '*'
     user = session['username']
-    stmt = f"SELECT * FROM messages WHERE message GLOB '{query}' AND (sender='{user}' OR receiver LIKE '{user}')"
+    stmt = f"SELECT * FROM messages WHERE message GLOB ? AND (sender=? OR receiver LIKE ?)"
     result = f"Query: {pygmentize(stmt)}\n"
     try:
-        c = conn.execute(stmt)
+        c = conn.execute(stmt, (query, user, user))
         rows = c.fetchall()
         result = result + 'Result:\n'
         for row in rows:
@@ -249,6 +248,7 @@ def search():
         return result
     except Error as e:
         return (f'{result}ERROR: {e}', 500)
+"""
 
 
 @app.get('/messages')
@@ -256,16 +256,18 @@ def messages():
     is_session = getsession()
     if not is_session:
         return redirect('.')
-    query = '*'
     user = session['username']
-    stmt = f"SELECT * FROM messages WHERE id IN (SELECT message_id FROM messages_to_receivers WHERE receiver_name={user})"
-    result = f"Query for messages: {pygmentize(stmt)}\n"
+    stmt = "SELECT * FROM messages WHERE id IN (SELECT message_id FROM messages_to_receivers WHERE receiver_name LIKE ?)"
+    # The SQL-statement that is added in the variable result would be unsafe to execute,
+    # but is only used for printing!!
+    result = f"Query for messages: {pygmentize(f'SELECT * FROM messages WHERE id IN (SELECT message_id FROM messages_to_receivers WHERE receiver_name LIKE {user})')}\n"
     try:
-        c = conn.execute(stmt)
+        c = conn.execute(stmt, (user,))
         rows = c.fetchall()
-        result = result + 'Result:\n'
+        result += 'Result:\n'
+        result += '[Message ID, Name of the sender, Timestamp, ID of replied message, Message content]\n'
         for row in rows:
-            result = f'{result}    {dumps(row)}\n'
+            result += f'{dumps(row)}\n'
         c.close()
         return result
     except Error as e:
@@ -281,24 +283,28 @@ def message_id(ID):
     user = session['username']
     result = ''
     try:
-        stmt = f"SELECT sender FROM messages WHERE id = {ID})"
-        c = conn.execute(stmt)
-        user_sent = c.fetchall()
+        stmt = f"SELECT sender FROM messages WHERE id = ?"
+        c = conn.execute(stmt, (ID,))
+        user_sent = c.fetchall()[0][0]
+        print(user_sent)
 
-        stmt = f"SELECT * FROM messages WHERE id = {ID})"
-        c = conn.execute(stmt)
-        row = c.fetchall()
-        result += f"Querry for messages: {pygmentize(stmt)}\n"
+        stmt = "SELECT * FROM messages WHERE id = ?"
+        c = conn.execute(stmt, (ID,))
+        row = c.fetchall()[0]
+        # The SQL-statement that is added in the variable result would be unsafe to execute,
+        # but is only used for printing!!
+        result += f"Query for messages: {pygmentize(f'SELECT * FROM messages WHERE id = {ID}')}\n"
 
         result += 'Result:\n'
-        result += f'{result}    {dumps(row)}\n'
+        result += '[Message ID, Name of the sender, Timestamp, ID of replied message, Message content]\n'
+        result += f'{dumps(row)}\n'
         if user_sent == user:
-            stmt = f"SELECT receiver_name FROM messages_to_receivers WHERE message_id={ID}"
-            c = conn.execute(stmt)
+            stmt = f"SELECT receiver_name FROM messages_to_receivers WHERE message_id=?"
+            c = conn.execute(stmt, (ID,))
             rows = c.fetchall()
             result += 'Receivers:\n'
             for row in rows:
-                result += f'{result}    {dumps(row)}\n'
+                result += f'{dumps(row)}\n'
         c.close()
         return result
     except Error as e:
@@ -310,31 +316,46 @@ def send():
     is_session = getsession()
     if not is_session:
         return redirect('.')
+    result = ''
     try:
         sender = session['username']
         # Comma separated list of receivers
         receivers = request.args.get('receiver') or request.args.get('receiver')
         receivers = receivers.split(',')
         reply_id = request.args.get('reply_id') or request.args.get('reply_id')
-        print(reply_id)
+        print(f'Receivers: {receivers}')
         message = request.args.get('message') or request.args.get('message')
         if not sender or not message:
             return f'ERROR: missing sender or message'
-        if(reply_id == ""):
-            stmt = f"INSERT INTO messages (sender, reply_id, message) values ('{sender}', null, '{message}');"
+        if reply_id == "":
+            print('Inserted into messages!')
+            stmt = "INSERT INTO messages (sender, reply_id, message) values (?, null, ?);"
+            # The SQL-statement that is added in the variable result would be unsafe to execute,
+            # but is only used for printing!!
+            result += f"Query: {pygmentize(f'INSERT INTO messages (sender, reply_id, message) values ({sender}, null, {message});')}\n"
+            conn.execute(stmt, (sender, message,))
         else:
-            stmt = f"INSERT INTO messages (sender, reply_id, message) values ('{sender}', '{reply_id}', '{message}');"
-        result = f"Query: {pygmentize(stmt)}\n"
-        conn.execute(stmt)
+            stmt = "INSERT INTO messages (sender, reply_id, message) values (?, ?, ?);"
+            # The SQL-statement that is added in the variable result would be unsafe to execute,
+            # but is only used for printing!!
+            result += f"Query: {pygmentize(f'INSERT INTO messages (sender, reply_id, message) values ({sender}, {reply_id}, {message});')}\n"
+            conn.execute(stmt, (sender, reply_id, message,))
         # Get the ID of the current row.
-        current_row_id = '''SELECT last_insert_rowid()'''
+        stmt = '''SELECT last_insert_rowid()'''
+        c = conn.execute(stmt)
+        current_row_id = c.fetchall()[0][0]
         for receiver in receivers:
-            stmt = f"INSERT INTO messages_to_receivers (message_id, receiver_name) values ('{current_row_id}', '{receiver}');"
-            conn.execute(stmt)
-            result += f'{pygmentize(stmt)}\n'
+            print(f'Inserted {receiver} as a receiver!')
+            print(f'Current ID: {current_row_id}')
+            stmt = "INSERT INTO messages_to_receivers (message_id, receiver_name) values (?, ?);"
+            conn.execute(stmt, (current_row_id, receiver,))
+            # The SQL-statement that is added in the variable result would be unsafe to execute,
+            # but is only used for printing!!
+            result += f'{pygmentize(f"INSERT INTO messages_to_receivers (message_id, receiver_name) values ({current_row_id}, {receiver});")}\n'
         return f'{result}ok'
     except Error as e:
         return f'{result}ERROR: {e}'
+
 
 try:
     conn = apsw.Connection('./tiny.db')
