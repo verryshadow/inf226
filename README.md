@@ -24,15 +24,21 @@ Description
 Assumptions and Techincal Details  :
 
 1- Multiple receivers are separated with commas and that's why a username can only include letters, numbers, and underscore.
-2- Show all will only show all messages received by the logged-in user 
-3- Reply ID allows the user to reply to a specific message that is either sent by them or sent to them. 
-5- Before showing the result of the search for a message, a line showing the format of the result is printed 
 
-How to test : 
-1- 
-2-
-3-
-4-
+2- Show all will only show all messages received by the logged-in user 
+
+3- Reply ID allows the user to reply to a specific message that is either sent by them or sent to them. 
+
+4- Before showing the result of the search for a message, a line showing the format of the result is printed 
+
+How to test (make sure to install all flask libraries before starting) : 
+1- Open terminal 
+
+2- Clone all files from github (command : git clone (the link ))
+
+3-run using the command : flask run 
+
+4-Connect to http://localhost:5000/ 
 
 
 Answers to Questions : 
