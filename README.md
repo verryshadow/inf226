@@ -43,7 +43,9 @@ There are 3 buttons and 4 text bars in the design. The "show message" button wil
 
 4-run using the command: flask run 
 
-5-Connect to http://localhost:5000/ 
+5-Connect to http://localhost:5000/
+
+6-Login as one of the users "alice" (password: "password123") or "bob" (password: "bananas")
 
 
 ## Answers to Questions 
